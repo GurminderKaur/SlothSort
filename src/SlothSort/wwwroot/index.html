@@ -207,7 +207,7 @@ function render() {
     else if (p.status === "skipped") why.append(el("span", { class: "badge b-skipped", text: "skipped" }), p.error || "");
     else {
       why.append(el("span", { class: "badge b-" + p.source, text: p.source === "ai" ? "AI" : p.source }), p.reason || "");
-      if (p.sensitive) why.append(" ", el("span", { title: "Looks like it holds personal or financial details", text: "🔒" }));
+      if (p.sensitive) why.append(" ", el("span", { title: "Private folder (banking, medical or ID): keep it off shared drives", text: "🔒" }));
       if (p.seconds) why.append(el("span", { class: "hint", text: ` · ${p.seconds}s` }));
     }
     const isImg = /\.(jpe?g|png)$/i.test(p.fileName) && editable;

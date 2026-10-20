@@ -39,10 +39,9 @@ public sealed class Classifier
             "folder":    { "type": "string", "enum": {{JsonSerializer.Serialize(Folders.AiChoices)}} },
             "title":     { "type": "string" },
             "date":      { "type": "string" },
-            "sensitive": { "type": "boolean" },
             "reason":    { "type": "string" }
           },
-          "required": ["folder", "title", "date", "sensitive", "reason"]
+          "required": ["folder", "title", "date", "reason"]
         }
         """)!;
 
@@ -56,7 +55,6 @@ public sealed class Classifier
           Medical = health records, prescriptions, test results. Photos = pictures of people, places or things. Other = anything else.
         - title: 2 to 6 words naming the file the way a person would, e.g. "Telus Mobility Bill", "Air Canada Boarding Pass", "Rental Lease Agreement". No date in the title. Use names from the content if present.
         - date: the main date the document is about (bill date, statement date, travel date) as YYYY-MM-DD, or "" if there isn't one.
-        - sensitive: true if it contains ID numbers, bank/credit card numbers, SIN, health or salary details.
         - reason: under 12 words, why you chose the folder.
         Use only the evidence. Do not invent names, dates or companies.
         """;

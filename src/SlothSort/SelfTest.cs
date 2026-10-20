@@ -49,6 +49,7 @@ public static class SelfTest
             // ── Model output ───────────────────────────────────────────────
             var v = Classifier.Parse("""ok {"folder":"bills & receipts","title":"Telus Bill","date":"2026-10-14","sensitive":false,"reason":"phone bill"}""");
             Eq("parse: folder matched case-insensitively", v.Folder, Folders.Bills);
+            True("private: banking/medical/ID folders get a lock, bills don't", Folders.IsPrivate(Folders.Medical) && !Folders.IsPrivate(Folders.Bills));
             Eq("parse: unknown folder → Other", Classifier.Parse("""{"folder":"Taxes 2026","title":"x","date":"","sensitive":false,"reason":""}""").Folder, Folders.Other);
 
             // ── Safety guard ───────────────────────────────────────────────

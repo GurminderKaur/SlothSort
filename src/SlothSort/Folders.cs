@@ -77,6 +77,9 @@ public static class Folders
         || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase) || ext.Equals(".png", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Rule-decided files keep their original name (installers etc. are recognised by name).</summary>
+    /// <summary>Folders whose files get a 🔒: decided by the folder, not by the model, so it's predictable.</summary>
+    public static bool IsPrivate(string folder) => folder is Money or Medical or Personal;
+
     public static bool KeepsOriginalName(string folder) =>
         folder is Installers or Archives or Media or Screenshots or Photos;
 }

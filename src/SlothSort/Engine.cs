@@ -118,9 +118,10 @@ public sealed class Engine
                     var excerpt = TextExtract.Excerpt(f.FullName);
                     byte[]? image = Folders.ImageExt.Contains(f.Extension) && f.Length < 20_000_000 ? await File.ReadAllBytesAsync(f.FullName, ct) : null;
                     var (v, secs) = await _ai.ClassifyAsync(f, excerpt, image, ct);
-                    p.Folder = v.Folder; p.Reason = v.Reason; p.Sensitive = v.Sensitive; p.Source = "ai"; p.Seconds = Math.Round(secs, 1);
+                    p.Folder = v.Folder; p.Reason = v.Reason; p.Source = "ai"; p.Seconds = Math.Round(secs, 1);
                     p.NewName = Folders.KeepsOriginalName(v.Folder) ? f.Name : Namer.Build(v.Title, v.Date, f.LastWriteTime, f.Extension, DateTime.Today);
                 }
+                p.Sensitive = Folders.IsPrivate(p.Folder);
                 p.NewName = Namer.Unique(Path.Combine(destRoot, p.Folder), p.NewName, planned);
             }
             catch (OperationCanceledException) { throw; }
@@ -151,7 +152,7 @@ public sealed class Engine
             var ext = Path.GetExtension(p.FileName);
             var name = clean + ext;
             if (p.Folder != folder || p.NewName != name) p.Source = "you";
-            p.Folder = folder; p.NewName = name; p.Selected = selected && p.Status == ProposalStatus.Pending;
+            p.Folder = folder; p.NewName = name; p.Sensitive = Folders.IsPrivate(folder); p.Selected = selected && p.Status == ProposalStatus.Pending;
             return Clone(p);
         }
     }
