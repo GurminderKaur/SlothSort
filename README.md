@@ -4,7 +4,7 @@
 
 **A local AI tidies your messy Downloads folder while you do nothing.**
 
-`document(7).pdf` becomes `Bills & Receipts/2026-10-14 Chinook Mobile Bill.pdf`. `Untitled document.docx` becomes `Home & Car/2026-11-01 Residential Lease Agreement.docx`. Installers, zips and screenshots get filed too. It takes **two clicks**: *Look through it*, then *Tidy*.
+`document(7).pdf` becomes `Bills & Receipts/2026-10-14 Chinook Mobile Bill.pdf`. `Untitled document.docx` becomes `Home & Car/2026-11-01 Rental Lease Agreement.docx`. Installers, zips and screenshots get filed too. It takes **two clicks**: *Look through it*, then *Tidy*.
 
 ![Sloth Sort planning a tidy-up](docs/screenshot-plan.jpg)
 
@@ -12,7 +12,7 @@
 - **Rules first, AI second.** Installers, archives, audio/video and screenshots are sorted by rules instantly, with no AI needed.
 - **Shows you the plan before anything moves.** Untick files, rename them or change their folder, or just click *Tidy*.
 - **Never deletes, never overwrites.** Every change is a move, recorded in a journal, and **every tidy-up can be undone** with one click.
-- **Stays private.** The page is served on `127.0.0.1` only. The model runs on your computer. Bank statements, IDs and medical letters never leave it, and Sloth Sort marks those files with 🔒.
+- **Stays private.** The page is served on `127.0.0.1` only. The model runs on your computer. Bank statements, IDs and medical letters never leave it. Files in the Banking, Medical and IDs folders are marked 🔒.
 
 ![After tidying, with undo history](docs/screenshot-done.jpg)
 
@@ -55,6 +55,27 @@ slothsort selftest               run the built-in checks
 
 ## How well does it sort?
 On every push, [CI](.github/workflows/ci.yml) builds and self-tests on Windows, macOS and Linux. It then creates a messy folder of **fictional sample files** (`samples/make_messy_folder.py`) and has the real `gemma3:4b` plan the tidy-up. Each file is scored on "right folder?" and "sensible name?", and the results are posted in the run summary. The dry run is also checked to make sure it moved nothing.
+
+Latest result with `gemma3:4b` (16 files: 11 decided by the model, 4 by rules, 1 half-finished download that must be skipped):
+
+| | Result |
+|---|---|
+| Right folder | **15 / 15** |
+| Sensible new name | **10 / 10** |
+| Half-finished download skipped | yes |
+| Time per file the model read | ~31 s on a CPU-only GitHub runner (no GPU) |
+
+| Before | After |
+|---|---|
+| `document(7).pdf` | `Bills & Receipts/2026-10-14 Chinook Mobile Monthly Bill.pdf` |
+| `statement_0923.pdf` | `Banking & Taxes/2026-09-01 Prairie Credit Union Chequing Statement.pdf` 🔒 |
+| `download.pdf` | `Medical/2026-10-02 Bow River Medical Laboratory.pdf` 🔒 |
+| `Untitled document.docx` | `Home & Car/2026-11-01 Rental Lease Agreement.docx` |
+| `notes.txt` | `School/2026-11-02 COMP 2510 Assignment 3.txt` |
+| `scan0001.jpg` (a receipt photo) | `Bills & Receipts/2026-10-05 Chinook Coffee House Receipt.jpg` |
+| `booking-confirmation.html` | `Travel/2026-11-20 Aurora Air Booking Confirmation.html` |
+
+Sixteen easy, clearly-labelled test files are not your real Downloads folder: expect some misses there, which is why you see and can change the plan before anything moves.
 
 ## Why open models
 - **Your files stay yours.** A Downloads folder is full of statements, IDs, leases and medical letters. A cloud API would need to see them; Gemma on your laptop doesn't send them anywhere.
