@@ -67,6 +67,7 @@ jobs:
           python3 samples/score.py plan.json
           python3 samples/score.py plan.json --markdown >> "$GITHUB_STEP_SUMMARY"
           python3 samples/score.py plan.json --annotations
+          python3 -c "import json;p=json.load(open('plan.json'));print('::notice title=Full plan::'+'%0A'.join(x['fileName']+' -> '+x['folder']+'/'+x['newName']+' ('+x['source']+(', sensitive' if x.get('sensitive') else '')+')' for x in p))"
       - name: Nothing was moved by the dry run
         run: test -f "$RUNNER_TEMP/messy/document(7).pdf" && test ! -d "$RUNNER_TEMP/messy/Sorted"
       - uses: actions/upload-artifact@v4
