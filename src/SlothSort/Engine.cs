@@ -48,6 +48,7 @@ public sealed class Engine
         if (problem != null) return problem;
         if (!string.IsNullOrWhiteSpace(s.Destination))
         {
+            if (!_guard.Inside(s.Destination)) return "Destination: for safety, choose a folder inside your user folder.";
             Directory.CreateDirectory(s.Destination);
             var dp = _guard.Check(s.Destination);
             if (dp != null) return "Destination: " + dp;

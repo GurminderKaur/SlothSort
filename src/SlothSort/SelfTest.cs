@@ -136,6 +136,8 @@ public static class SelfTest
     private static void Report(string name, bool ok, string detail)
     {
         if (ok) _pass++; else _fail++;
+        if (!ok && Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+            Console.WriteLine($"::error title=Self-test failed::{name} {detail}");
         Console.WriteLine($"{(ok ? "  ✓" : "  ✗")} {name}{(ok ? "" : "  — " + detail)}");
     }
 }

@@ -26,8 +26,12 @@ public sealed class Guard
 
         var home = _roots[0];
         if (string.Equals(full, home, Cmp)) return "That's your whole user folder. Pick a specific folder like Downloads.";
-        foreach (var bad in new[] { "AppData", "Library", ".config", ".local", ".ssh", ".gnupg", ".slothsort" })
-            if (Under(full, Path.Combine(home, bad)) || string.Equals(full, Path.Combine(home, bad), Cmp)) return $"Sloth Sort won't touch {bad} — pick a normal folder like Downloads.";
+        // A folder you named yourself on the command line (--allow) wins over the app-data rule,
+        // e.g. a test folder under %TEMP%, which on Windows lives inside AppData.
+        bool named = _roots.Skip(1).Any(r => Under(full, r) || string.Equals(full, r, Cmp));
+        if (!named)
+            foreach (var bad in new[] { "AppData", "Library", ".config", ".local", ".ssh", ".gnupg", ".slothsort" })
+                if (Under(full, Path.Combine(home, bad)) || string.Equals(full, Path.Combine(home, bad), Cmp)) return $"Sloth Sort won't touch {bad} — pick a normal folder like Downloads.";
         foreach (var sys in SystemFolders())
             if (!string.IsNullOrEmpty(sys) && (string.Equals(full, sys, Cmp) || Under(full, sys))) return "Sloth Sort won't touch system or program folders.";
 
@@ -35,6 +39,12 @@ public sealed class Guard
         if (!allowed)
             return "For safety, Sloth Sort only tidies folders inside your user folder (like Downloads or Desktop).";
         return null;
+    }
+
+    /// <summary>True if the path is somewhere under your user folder or a folder you allowed (it may not exist yet).</summary>
+    public bool Inside(string path)
+    {
+        try { var full = Full(path); return _roots.Any(r => Under(full, r)); } catch { return false; }
     }
 
     private static IEnumerable<string> SystemFolders() => new[]
