@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sloth Sort — tidy folders, zero effort</title>
+<style>
+  :root {
+    --bg: #f3f1ea; --card: #fffdf8; --ink: #2b2a25; --muted: #6d6a5f; --line: #e2ddcf;
+    --moss: #4f6b3a; --moss-soft: #e5ecd9; --bark: #8a6a45; --bark-soft: #f1e6d6;
+    --warn: #9a5b00; --warn-soft: #fbecd2; --err: #a8322a; --err-soft: #f8dfdc; --focus: #1d5fbf; --r: 12px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.45; }
+  header { display: flex; gap: 14px; align-items: center; padding: 16px 28px; background: var(--card); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .brand { font-weight: 750; font-size: 21px; display: flex; gap: 8px; align-items: center; }
+  .tag { color: var(--muted); font-size: 14px; }
+  .pill { margin-left: auto; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+  .ok { background: var(--moss-soft); color: var(--moss); } .bad { background: var(--err-soft); color: var(--err); }
+  main { max-width: 1240px; margin: 0 auto; padding: 22px 28px 60px; }
+  .banner { display: none; border-radius: var(--r); padding: 12px 16px; margin-bottom: 14px; }
+  .banner.err { display: block; background: var(--err-soft); color: var(--err); }
+  .banner.info { display: block; background: var(--moss-soft); color: var(--moss); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; margin-bottom: 16px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1 1 320px; min-width: 0; }
+  label.field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); }
+  input[type=text], select { font: inherit; color: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: #fff; width: 100%; min-width: 0; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); border-radius: 9px; padding: 9px 15px; cursor: pointer; color: var(--ink); }
+  button:hover { border-color: #cbc4b1; }
+  button.primary { background: var(--moss); border-color: var(--moss); color: #fff; font-weight: 600; }
+  button.primary:disabled { opacity: .5; cursor: default; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .hint { color: var(--muted); font-size: 13px; }
+  .progress { height: 8px; background: #ebe6d8; border-radius: 99px; overflow: hidden; margin-top: 10px; }
+  .progress > div { height: 100%; background: var(--moss); width: 0; transition: width .4s; }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+  @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } main, header { padding-left: 16px; padding-right: 16px; } }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+  .stat .k { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .stat .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat.accent .v { color: var(--moss); }
+  .tablewrap { position: relative; overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 8px 12px; border-bottom: 1px solid #eee8da; vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  tr.off td { opacity: .5; }
+  .from { font-family: ui-monospace, Consolas, monospace; font-size: 13px; word-break: break-all; max-width: 280px; }
+  .arrow { color: var(--muted); }
+  td.newname { min-width: 220px; } td.folder { min-width: 170px; }
+  .why { color: var(--muted); font-size: 13px; max-width: 260px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; margin-right: 4px; text-transform: uppercase; letter-spacing: .03em; }
+  .b-rule { background: #ece7da; color: var(--bark); } .b-ai { background: var(--moss-soft); color: var(--moss); } .b-you { background: #e3ebf7; color: #2c4f86; }
+  .b-moved { background: var(--moss-soft); color: var(--moss); } .b-error { background: var(--err-soft); color: var(--err); } .b-skipped { background: var(--warn-soft); color: var(--warn); }
+  .thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); vertical-align: middle; margin-right: 6px; }
+  .actionbar { position: sticky; bottom: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; margin-top: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; box-shadow: 0 -6px 18px rgba(0,0,0,.05); }
+  .actionbar .msg { margin-right: auto; }
+  .history li { margin: 6px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .history ul { padding-left: 0; list-style: none; margin: 0; }
+  .empty { padding: 34px; text-align: center; color: var(--muted); }
+  footer { color: var(--muted); font-size: 13px; margin-top: 20px; overflow-wrap: anywhere; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .spin { display: inline-block; width: 10px; height: 10px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: s .9s linear infinite; margin-right: 6px; vertical-align: -1px; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } .progress > div { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span aria-hidden="true">🦥</span> Sloth Sort</div>
+  <div class="tag">Tidies your folders while you do nothing · runs on this computer only</div>
+  <div id="pill" class="pill">Checking…</div>
+</header>
+
+<main>
+  <div id="banner" class="banner" role="status"></div>
+
+  <section class="card" aria-labelledby="s1">
+    <h2 id="s1" style="margin:0 0 10px;font-size:17px">1 · Which folder is a mess?</h2>
+    <div class="row">
+      <label class="field grow">Folder to tidy <input id="folder" type="text" spellcheck="false" autocomplete="off"></label>
+      <label class="field grow">Sorted files go to (leave empty for a "Sorted" folder inside it) <input id="dest" type="text" spellcheck="false" autocomplete="off" placeholder="(inside the folder above)"></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <label class="row hint" style="gap:6px"><input id="readImages" type="checkbox"> Also look inside photos (slower, finds receipts and documents in pictures)</label>
+      <span style="margin-left:auto"></span>
+      <button id="look" class="primary">Look through it</button>
+      <button id="cancel" hidden>Stop</button>
+    </div>
+    <div id="progressBox" hidden>
+      <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+      <div id="progressText" class="hint" style="margin-top:6px" aria-live="polite"></div>
+    </div>
+    <p class="hint" style="margin:12px 0 0">Looking changes nothing. Only the top level of the folder is checked, not subfolders. Files still downloading are skipped. Nothing is ever deleted or overwritten.</p>
+  </section>
+
+  <div class="stats" aria-live="polite">
+    <div class="stat"><div class="k">Files to tidy</div><div class="v" id="sCount">0</div></div>
+    <div class="stat"><div class="k">Folders</div><div class="v" id="sFolders">0</div></div>
+    <div class="stat"><div class="k">Decided by AI</div><div class="v" id="sAi">0</div></div>
+    <div class="stat accent"><div class="k">Your effort</div><div class="v" id="sEffort">0 clicks</div></div>
+  </div>
+
+  <section aria-labelledby="s2">
+    <h2 id="s2" style="font-size:17px;margin:0 0 10px">2 · Check the plan (optional, sloths may skip this)</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th><span class="sr">Include</span></th><th>Now</th><th aria-hidden="true"></th><th>Folder</th><th>New name</th><th>Why</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty" class="empty">Choose a folder and click <b>Look through it</b>. Sloth Sort will propose a tidy name and folder for each file.</div>
+    </div>
+    <div class="actionbar">
+      <span class="msg" id="actionMsg">Nothing planned yet.</span>
+      <button id="apply" class="primary" disabled>Tidy</button>
+    </div>
+  </section>
+
+  <section class="card history" aria-labelledby="s3" style="margin-top:16px">
+    <h2 id="s3" style="font-size:17px;margin:0 0 6px">History · undo anything</h2>
+    <ul id="history"><li class="hint">No tidy-ups yet.</li></ul>
+  </section>
+
+  <footer>
+    🔒 The AI model runs on this computer through Ollama. Only a short text excerpt of each document (or the photo, if you turn that on) is shown to it, and nothing is sent anywhere else.
+    Sloth Sort moves files and keeps an undo history in <code id="dataDir"></code>. It never deletes anything.
+  </footer>
+</main>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const api = (path, opts = {}) => fetch(path, { ...opts, headers: { "X-Sloth": "1", ...(opts.headers || {}) } })
+  .then(async r => { const t = await r.text(); if (!r.ok) throw new Error(t.replace(/^"|"$/g, "") || r.statusText); try { return JSON.parse(t); } catch { return t; } });
+const json = body => ({ headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+let folders = [], plan = [], clicks = 0, poll = null, wasPlanning = false;
+
+function el(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids) if (k != null) e.append(k);
+  return e;
+}
+function banner(msg, kind = "err") { const b = $("#banner"); b.textContent = msg || ""; b.className = "banner" + (msg ? " " + kind : ""); }
+const size = n => n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB";
+
+async function status() {
+  try {
+    const s = await api("/api/status");
+    $("#dataDir").textContent = s.dataDir;
+    const p = $("#pill"); p.className = "pill " + (s.ready ? "ok" : "bad");
+    p.textContent = s.ready ? `Ready · ${s.model} (local)` : "AI model not ready";
+    if (!s.ready && !$("#banner").textContent) banner(s.problem);
+    const box = $("#progressBox"); box.hidden = !s.planning && !s.total;
+    $("#look").disabled = s.planning; $("#cancel").hidden = !s.planning;
+    if (s.total) { $("#bar").style.width = Math.round(100 * s.done / s.total) + "%"; }
+    $("#progressText").replaceChildren(s.planning ? el("span", { class: "spin" }) : "",
+      s.planning ? `Looked at ${s.done} of ${s.total} files… (you can go make tea)` : s.total ? `Looked at all ${s.total} files.` : "");
+    if (s.planError) banner(s.planError);
+    if (s.planning || wasPlanning) await loadPlan();
+    wasPlanning = s.planning;
+    clearTimeout(poll); poll = setTimeout(status, s.planning ? 1000 : 10000);
+  } catch { banner("Can't reach Sloth Sort. Is it still running?"); }
+}
+
+async function loadSettings() {
+  folders = await api("/api/folders");
+  const { settings } = await api("/api/settings");
+  $("#folder").value = settings.folder; $("#dest").value = settings.destination || ""; $("#readImages").checked = settings.readImages;
+}
+
+async function loadPlan() { plan = await api("/api/plan"); render(); }
+
+function render() {
+  $("#empty").style.display = plan.length ? "none" : "block";
+  const live = plan.filter(p => p.status === "pending");
+  const chosen = live.filter(p => p.selected);
+  $("#sCount").textContent = chosen.length;
+  $("#sFolders").textContent = new Set(chosen.map(p => p.folder)).size;
+  $("#sAi").textContent = plan.filter(p => p.source === "ai").length;
+  $("#sEffort").textContent = `${clicks} click${clicks === 1 ? "" : "s"}`;
+  $("#apply").disabled = chosen.length === 0;
+  $("#apply").textContent = chosen.length ? `Tidy ${chosen.length} file${chosen.length === 1 ? "" : "s"}` : "Tidy";
+  $("#actionMsg").textContent = !plan.length ? "Nothing planned yet."
+    : chosen.length ? `${chosen.length} file${chosen.length === 1 ? "" : "s"} will move into ${new Set(chosen.map(p => p.folder)).size} folders. Nothing is deleted, and you can undo.`
+    : plan.some(p => p.status === "moved") ? "Done. Your folder is tidy. 🦥" : "Nothing selected.";
+
+  $("#rows").replaceChildren(...plan.map(p => {
+    const editable = p.status === "pending";
+    const sel = el("select", { "aria-label": `Folder for ${p.fileName}`, disabled: !editable, onchange: e => edit(p, { folder: e.target.value }) },
+      ...folders.map(f => el("option", { value: f, text: f, selected: f === p.folder })));
+    const name = el("input", { type: "text", value: p.newName, "aria-label": `New name for ${p.fileName}`, disabled: !editable, spellcheck: "false",
+      onchange: e => edit(p, { newName: e.target.value }) });
+    const box = el("input", { type: "checkbox", "aria-label": `Include ${p.fileName}`, checked: p.selected && editable, disabled: !editable,
+      onchange: e => edit(p, { selected: e.target.checked }) });
+    const why = el("td", { class: "why" });
+    if (p.status === "moved") why.append(el("span", { class: "badge b-moved", text: "moved" }));
+    else if (p.status === "error") why.append(el("span", { class: "badge b-error", text: "skipped" }), p.error || "");
+    else if (p.status === "skipped") why.append(el("span", { class: "badge b-skipped", text: "skipped" }), p.error || "");
+    else {
+      why.append(el("span", { class: "badge b-" + p.source, text: p.source === "ai" ? "AI" : p.source }), p.reason || "");
+      if (p.sensitive) why.append(" ", el("span", { title: "Looks like it holds personal or financial details", text: "🔒" }));
+      if (p.seconds) why.append(el("span", { class: "hint", text: ` · ${p.seconds}s` }));
+    }
+    const isImg = /\.(jpe?g|png)$/i.test(p.fileName) && editable;
+    return el("tr", { class: p.selected || !editable ? "" : "off" },
+      el("td", {}, box),
+      el("td", { class: "from" }, isImg ? el("img", { class: "thumb", src: `/api/preview/${p.id}`, alt: "", loading: "lazy" }) : null, p.fileName,
+        el("div", { class: "hint", text: `${size(p.size)} · ${new Date(p.modified).toLocaleDateString()}` })),
+      el("td", { class: "arrow", "aria-hidden": "true", text: "→" }),
+      el("td", { class: "folder" }, sel),
+      el("td", { class: "newname" }, name),
+      why);
+  }));
+}
+
+async function edit(p, change) {
+  const body = { folder: p.folder, newName: p.newName, selected: p.selected, ...change };
+  try { Object.assign(p, await api(`/api/plan/${p.id}`, { method: "PUT", ...json(body) })); }
+  catch (e) { banner(e.message); }
+  render();
+}
+
+async function look() {
+  banner("");
+  try {
+    await api("/api/settings", { method: "PUT", ...json({ folder: $("#folder").value, destination: $("#dest").value, readImages: $("#readImages").checked }) });
+    await api("/api/plan", { method: "POST" });
+    clicks = 1; plan = []; render(); wasPlanning = true; status();
+  } catch (e) { banner(e.message); }
+}
+
+async function apply() {
+  const n = plan.filter(p => p.selected && p.status === "pending").length;
+  if (!confirm(`Move ${n} files into tidy folders? You can undo this from History.`)) return;
+  try {
+    const r = await api("/api/apply", { method: "POST" });
+    clicks += 1;
+    banner(`🦥 Done: moved ${r.moved} files. Total AI thinking time ${Math.round(r.aiSeconds)}s; your effort: ${clicks} clicks. Undo any time below.`, "info");
+    await loadPlan(); await history();
+  } catch (e) { banner(e.message); }
+}
+
+async function history() {
+  const list = await api("/api/journal");
+  $("#history").replaceChildren(...(list.length ? list.map(b => el("li", {},
+    el("span", { text: `${new Date(b.whenUtc).toLocaleString()} · ${b.moved} files from ${b.folder}` }),
+    b.undone ? el("span", { class: "badge b-skipped", text: "undone" })
+      : el("button", { text: "Undo", "aria-label": `Undo tidy-up from ${new Date(b.whenUtc).toLocaleString()}`, onclick: () => undo(b) })))
+    : [el("li", { class: "hint", text: "No tidy-ups yet." })]));
+}
+
+async function undo(b) {
+  if (!confirm(`Put ${b.moved} files back where they were?`)) return;
+  try {
+    const r = await api(`/api/undo/${b.id}`, { method: "POST" });
+    banner(r.problems.length ? `Restored ${r.restored} files. ${r.problems.join(" ")}` : `Restored ${r.restored} files to their original place.`, r.problems.length ? "err" : "info");
+    await history();
+  } catch (e) { banner(e.message); }
+}
+
+$("#look").addEventListener("click", look);
+$("#cancel").addEventListener("click", () => api("/api/plan/cancel", { method: "POST" }).then(status));
+$("#apply").addEventListener("click", apply);
+$("#folder").addEventListener("keydown", e => { if (e.key === "Enter") look(); });
+
+loadSettings().then(loadPlan).then(history).then(status);
+</script>
+</body>
+</html>

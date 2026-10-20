@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [published]   # publishing a release on GitHub builds the downloads and attaches them
+
+permissions:
+  contents: write   # only used by the release job on version tags
+
+jobs:
+  build:
+    name: Build + self-test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, rid: win-x64 }
+          - { os: macos-latest,   rid: osx-arm64 }
+          - { os: ubuntu-latest,  rid: linux-x64 }
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { shell: bash } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - name: Build
+        run: dotnet build src/SlothSort -c Release
+      - name: Self-test (names, safety rules, text extraction, move + undo)
+        run: dotnet run --project src/SlothSort -c Release --no-build -- selftest
+      - name: Publish single-file app
+        run: dotnet publish src/SlothSort -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true -o out/${{ matrix.rid }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: slothsort-${{ matrix.rid }}
+          path: out/${{ matrix.rid }}/slothsort*
+
+  real-model:
+    name: Tidy a sample messy folder with real Gemma 3 (local, via Ollama)
+    if: github.event_name != 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      MODEL: gemma3:4b
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - name: Install Ollama and pull Gemma 3 (4B, vision)
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          (ollama serve > /tmp/ollama.log 2>&1 &) || true
+          for i in $(seq 1 30); do curl -sf http://localhost:11434/api/tags >/dev/null && break; sleep 2; done
+          ollama pull "$MODEL"
+      - name: Make a messy folder of sample files (fictional)
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 samples/make_messy_folder.py "$RUNNER_TEMP/messy"
+      - name: Plan the tidy-up (dry run, reads photos too)
+        run: dotnet run --project src/SlothSort -c Release -- plan "$RUNNER_TEMP/messy" --read-images --model "$MODEL" --data "$RUNNER_TEMP/sloth-data" --json "$GITHUB_WORKSPACE/plan.json"
+      - name: Score against what a good tidy-up looks like
+        if: always()
+        run: |
+          python3 samples/score.py plan.json
+          python3 samples/score.py plan.json --markdown >> "$GITHUB_STEP_SUMMARY"
+          python3 samples/score.py plan.json --annotations
+      - name: Nothing was moved by the dry run
+        run: test -f "$RUNNER_TEMP/messy/document(7).pdf" && test ! -d "$RUNNER_TEMP/messy/Sorted"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-model-plan
+          path: plan.json
+
+  release:
+    name: Attach downloads to the GitHub release
+    if: github.event_name == 'release'
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dl }
+      - name: Zip each platform
+        run: |
+          cd dl
+          for d in slothsort-*; do (cd "$d" && zip -q -9 "../$d.zip" slothsort*); done
+          ls -la
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dl/slothsort-*.zip
