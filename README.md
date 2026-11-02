@@ -26,7 +26,7 @@ winget install -e --id Ollama.Ollama
 ollama pull gemma3:4b        # ~3.3 GB, one time
 ```
 
-**From source** (needs the .NET 8 SDK):
+**From source** (needs the .NET 10 SDK):
 ```powershell
 git clone https://github.com/GurminderKaur/SlothSort.git
 cd SlothSort\src\SlothSort
@@ -84,7 +84,7 @@ Sixteen easy, clearly-labelled test files are not your real Downloads folder: ex
 - **Yours to change.** Swap the model, edit the folder list or the prompt, or add rules.
 
 ## Built with
-[.NET 8](https://dotnet.microsoft.com) (ASP.NET Core minimal API) with **no third-party packages** (the PDF and Office text readers are built in), [Ollama](https://ollama.com), and [Gemma 3](https://ai.google.dev/gemma) (open weights, [Gemma Terms of Use](https://ai.google.dev/gemma/terms)).
+[.NET 10](https://dotnet.microsoft.com) (ASP.NET Core minimal API) with **no third-party packages** (the PDF and Office text readers are built in), [Ollama](https://ollama.com), and [Gemma 3](https://ai.google.dev/gemma) (open weights, [Gemma Terms of Use](https://ai.google.dev/gemma/terms)).
 
 **Limits:** scanned PDFs and PDFs with unusual font encodings yield no text, so Sloth Sort falls back to the file name. HEIC photos aren't read by the model. It suggests; you're always free to change the plan before tidying.
 
